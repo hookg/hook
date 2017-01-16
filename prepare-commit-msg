@@ -1,0 +1,58 @@
+#!/bin/sh
+text="gbksoft"
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+GREEN='\033[0;32m'
+error=""
+
+# Check text in diff
+
+todo_lines=$(git diff --cached | grep ^+ | grep -v pre-commit | grep "${text}" | sed 's_^+\s*__g')
+
+if [ "$todo_lines" != "" ]; then
+error="${error} \n${RED}#########     WARNING in code    ##########${NC}
+Your  ${GREEN}code${NC} contains information about ${RED}${text}${NC}!
+Fix it and try to commit again.
+    
+Commit contains text: 
+${todo_lines}
+${RED}#########     WARNING in code      ##########${NC}
+"
+
+fi
+
+
+# Check text in log message
+
+msg=`echo $(cat "$1")| grep "${text}"`
+
+if [ "$msg" != "" ]; then
+error="${error} \n${RED}#########     WARNING in log message    ##########${NC}
+Your ${GREEN}log message${NC} contains information about ${RED}${text}${NC}!
+Fix it and try to commit again.
+    
+Log message contains text: 
+${msg}
+${RED}#########     WARNING in log message     ##########${NC}
+"
+fi
+
+# Check GIT_AUTHOR_IDENT
+
+author=$(git var GIT_AUTHOR_IDENT | grep "${text}")
+
+if [ "$author" != "" ]; then
+error="${error} \n${RED}#########     WARNING in author info   ##########${NC}
+Your ${GREEN}user.name or user.email${NC} contains information about ${RED}${text}${NC}!
+Fix it and try to commit again.
+    
+CURRENT:
+${author}
+${RED}#########     WARNING in author info     ##########${NC}
+"
+fi
+
+if [ "${error}" ]; then
+echo "$error"
+exit 1
+fi
